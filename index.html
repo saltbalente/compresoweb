@@ -1,102 +1,604 @@
-<!DOCTYPE html><html lang="es" dir="ltr"><head>
-  <!-- Web Performance Optimizer Script -->
-<script>
-  (function() {
-    // 1. Reservar espacio para imágenes que no tienen width/height
-    document.querySelectorAll('img:not([width])').forEach(function(img) {
-      // Si ya está cargada, ignora
-      if (img.complete) return;
-      // Si tiene datos de tamaño en srcset, intenta usar el primer valor (más pequeño)
-      var match = img.srcset && img.srcset.match(/(\d+)w/);
-      var width = match ? parseInt(match[1], 10) : (img.naturalWidth || 300);
-      var height = img.naturalHeight || 200;
-      // Si el padre tiene tamaño, úsalo
-      if (img.parentElement && img.parentElement.offsetWidth && img.parentElement.offsetHeight) {
-        width = img.parentElement.offsetWidth;
-        height = img.parentElement.offsetHeight;
+<!DOCTYPE html>
+<html lang="es" dir="ltr">
+<head>
+  <!-- Web Performance Optimizer Script - Optimizado -->
+  <script>
+    (function() {
+      'use strict';
+      
+      // 1. Optimización de imágenes con Intersection Observer
+      if ('IntersectionObserver' in window) {
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const img = entry.target;
+              if (img.dataset.src) {
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
+                img.classList.remove('lazy');
+              }
+              observer.unobserve(img);
+            }
+          });
+        });
+
+        document.querySelectorAll('img[data-src]').forEach(img => {
+          imageObserver.observe(img);
+        });
       }
-      img.width = width;
-      img.height = height;
-      img.style.background = "#111"; // placeholder visual
-    });
-  
-    // 2. Lazy-load para imágenes grandes que no sean críticas
-    document.querySelectorAll('img').forEach(function(img) {
-      if (!img.hasAttribute('loading')) img.setAttribute('loading', 'lazy');
-    });
-  
-    // 3. Preload/preconnect para recursos críticos (solo si no existen ya)
-    var preconnects = [
-      "https://www.googletagmanager.com",
-      "https://fonts.googleapis.com",
-      "https://cdnjs.cloudflare.com",
-      "https://compresoweb.vercel.app"
-    ];
-    preconnects.forEach(function(url) {
-      if (!document.querySelector('link[rel="preconnect"][href="'+url+'"]')) {
-        var link = document.createElement('link');
-        link.rel = "preconnect";
-        link.href = url;
-        document.head.appendChild(link);
-      }
-    });
-  
-    // 4. Reserva espacio para los elementos que causan layout shift
-    function reserveLayout(selector, minHeight) {
-      document.querySelectorAll(selector).forEach(function(el) {
-        if (!el.style.minHeight) el.style.minHeight = minHeight + "px";
-      });
-    }
-    reserveLayout('.description', 48); // Ajusta según tu diseño
-    reserveLayout('.brillo-activo', 24);
-  
-    // 5. Reduce el trabajo del hilo principal: prioriza el CSS y difiere el JS no crítico
-    document.querySelectorAll('script[src]').forEach(function(script) {
-      // Si es main.min.js o scripts pesados, asegúrate que tengan defer
-      if (script.src.match(/main\.min\.js/) && !script.defer) script.defer = true;
-      if (script.src.match(/gtm-loader\.js/) && !script.defer) script.defer = true;
-    });
-  
-    // 6. Opcional: Reduce la evaluación de scripts de Tag Manager si no es crítico
-    // (solo si puedes/quiere, sino ignora este paso)
-    // window.dataLayer = window.dataLayer || [];
-    // window.dataLayer.push({event:'gtm.js'});
-  
-    // 7. Imágenes: Si tienes imágenes muy grandes, redimensiónalas automáticamente para dispositivos móviles
-    function optimizeImagesForDevice() {
-      var isMobile = window.innerWidth <= 600;
-      document.querySelectorAll('img').forEach(function(img) {
-        if (!img.srcset) return;
-        var srcs = img.srcset.split(',');
-        if (srcs.length > 1 && isMobile) {
-          // Usa la versión más pequeña para móviles
-          var bestSrc = srcs[0].trim().split(' ')[0];
-          img.src = bestSrc;
+
+      // 2. Preload crítico optimizado
+      const criticalResources = [
+        './css/critical.min.css',
+        './fonts/cinzel-v23-latin-400.woff2',
+        './fonts/cinzel-v23-latin-700.woff2'
+      ];
+
+      criticalResources.forEach(resource => {
+        if (!document.querySelector(`link[href="${resource}"]`)) {
+          const link = document.createElement('link');
+          link.rel = 'preload';
+          link.href = resource;
+          link.as = resource.includes('.css') ? 'style' : 'font';
+          link.type = resource.includes('.woff2') ? 'font/woff2' : '';
+          link.crossOrigin = resource.includes('.woff2') ? 'anonymous' : '';
+          document.head.appendChild(link);
         }
       });
-    }
-    window.addEventListener('load', optimizeImagesForDevice);
-  
-    // 8. Font swap: asegúrate que las fuentes tengan font-display: swap
-    var style = document.createElement('style');
-    style.innerHTML = "@font-face{font-display:swap}";
-    document.head.appendChild(style);
-  
-    // 9. Evita reflujo por el teléfono dinámico
-    var headerPhone = document.getElementById('header-phone');
-    if (headerPhone) {
-      headerPhone.style.minWidth = "130px"; // reserva espacio para el cambio
-    }
-  })();
+
+      // 3. DNS prefetch optimizado
+      const dnsPrefetchUrls = [
+        '//www.googletagmanager.com',
+        '//fonts.googleapis.com',
+        '//cdnjs.cloudflare.com'
+      ];
+
+      dnsPrefetchUrls.forEach(url => {
+        if (!document.querySelector(`link[href="${url}"]`)) {
+          const link = document.createElement('link');
+          link.rel = 'dns-prefetch';
+          link.href = url;
+          document.head.appendChild(link);
+        }
+      });
+
+      // 4. Layout shift prevention
+      const layoutElements = document.querySelectorAll('.description, .mystic-title, .phone-container');
+      layoutElements.forEach(el => {
+        if (!el.style.minHeight) {
+          el.style.minHeight = el.offsetHeight + 'px';
+        }
+      });
+
+      // 5. Script loading optimization
+      const scripts = document.querySelectorAll('script[src]');
+      scripts.forEach(script => {
+        if (!script.hasAttribute('defer') && !script.hasAttribute('async')) {
+          if (script.src.includes('main.min.js') || script.src.includes('gtm-loader.js')) {
+            script.defer = true;
+          }
+        }
+      });
+
+      // 6. Font display optimization
+      const fontStyle = document.createElement('style');
+      fontStyle.textContent = `
+        @font-face { font-display: swap; }
+        .font-loading { font-display: swap; }
+      `;
+      document.head.appendChild(fontStyle);
+
+      // 7. Image optimization for mobile
+      function optimizeImagesForDevice() {
+        const isMobile = window.innerWidth <= 768;
+        document.querySelectorAll('img[srcset]').forEach(img => {
+          if (isMobile && img.srcset) {
+            const srcs = img.srcset.split(',');
+            if (srcs.length > 1) {
+              const mobileSrc = srcs[0].trim().split(' ')[0];
+              if (img.src !== mobileSrc) {
+                img.src = mobileSrc;
+              }
+            }
+          }
+        });
+      }
+
+      // 8. Performance monitoring
+      if ('performance' in window) {
+        window.addEventListener('load', () => {
+          setTimeout(() => {
+            const perfData = performance.getEntriesByType('navigation')[0];
+            if (perfData && perfData.loadEventEnd > 3000) {
+              console.warn('Page load time exceeded 3 seconds');
+            }
+          }, 100);
+        });
+      }
+
+      // 9. Optimize phone number display
+      const phoneElements = document.querySelectorAll('#header-phone, #arcane-phone, #footer-phone');
+      phoneElements.forEach(el => {
+        el.style.minWidth = '130px';
+        el.style.display = 'inline-block';
+      });
+
+      // 10. Lazy load non-critical images
+      if ('loading' in HTMLImageElement.prototype) {
+        document.querySelectorAll('img:not([loading])').forEach(img => {
+          if (!img.classList.contains('critical')) {
+            img.loading = 'lazy';
+          }
+        });
+      }
+
+      // Initialize optimizations after DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', optimizeImagesForDevice);
+      } else {
+        optimizeImagesForDevice();
+      }
+    })();
   </script>
-  <!-- Google Tag Manager -->
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-  })(window,document,'script','dataLayer','GTM-NC4RNLBL');</script>
-  <!-- End Google Tag Manager --><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=6"><meta name="description" content="Brujo Jacob - Experto en brujería, amarres de amor y hechizos efectivos. Consulta gratis. Más de 35 años de experiencia."><meta name="generator" content="Brujo Jacob"><link rel="preload" href="./css/critical.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'"><link rel="preload" href="./fonts/cinzel-v23-latin-400.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="./fonts/cinzel-v23-latin-700.woff2" as="font" type="font/woff2" crossorigin><style> @font-face { font-family: 'Cinzel'; font-style: normal; font-weight: 400; font-display: swap; src: url('./fonts/cinzel-v23-latin-400.woff2') format('woff2'); unicode-range: U+1 4133912149FF, U+0131, U+1 4133912149, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+1 4133912149F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; } @font-face { font-family: 'Cinzel'; font-style: normal; font-weight: 700; font-display: swap; src: url('./fonts/cinzel-v23-latin-700.woff2') format('woff2'); unicode-range: U+1 4133912149FF, U+0131, U+1 4133912149, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+1 4133912149F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; } </style><link rel="dns-prefetch" href="//fonts.googleapis.com"><link rel="dns-prefetch" href="//cdnjs.cloudflare.com"><link rel="dns-prefetch" href="//www.googletagmanager.com"><style> body{margin:0;font-family:Arial,sans-serif;background:#000000;color:#333;line-height:1.6} .header{background:linear-gradient(45deg,#000,#333);color:#fff;padding:1rem;text-align:center} .logo{font-size:2rem;font-weight:bold;margin-bottom:0.5rem} .phone-container{display:flex;align-items:center;justify-content:center;gap:1rem;margin:1rem 0} .phone-link{color:#fff;text-decoration:none;font-size:1.2rem;font-weight:bold} .description2{font-size:1rem;opacity:0.9} .titulo-mistico{text-align:center;margin:2rem 0;position:relative} .titulo-dorado{font-family:'Cinzel',serif;font-size:3rem;background:linear-gradient(45deg,#ffd700,#fff3b0,#ffd700);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 30px rgba(255,215,0,0.3);margin-bottom:1rem} .container{max-width:1200px;margin:0 auto;padding:0 1rem} .description{font-family:'Cinzel',serif;font-size:1.2rem;line-height:1.8;color:#ffd700;text-shadow:0 0 10px rgba(255,215,0,0.3);background:linear-gradient(45deg,rgba(0,0,0,0.8) 30%,rgba(20,20,20,0.9) 70%);padding:2rem;border:2px solid;border-image:linear-gradient(45deg,#ffd700,#ffdf80,transparent,#ffdf80,#ffd700) 1;border-radius:15px;position:relative;overflow:hidden;backdrop-filter:blur(5px);box-shadow:0 0 30px rgba(255,215,0,0.1),inset 0 0 20px rgba(255,215,0,0.1);transform:translateZ(0)} .mystic-card{position:relative;max-width:800px;margin:2rem auto;border-radius:20px;overflow:hidden;transform:translateZ(0)} .mystic-image{width:100%;height:500px;object-fit:cover;filter:brightness(0.8) blur(2px);transition:filter 0.4s ease} .mystic-content{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;text-align:center;width:90%} .mystic-title{font-family:'Cinzel',serif;font-size:3.5rem;background:linear-gradient(45deg,#ffd700,#ffdf80,#ffd700);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 30px rgba(255,215,0,0.3);margin:0;animation:title-glow 2s ease-in-out infinite} .mystic-button{position:relative;display:inline-flex;align-items:center;gap:1rem;padding:1.2rem 2.5rem;background:linear-gradient(45deg,#ffd700,#b8860b,#ffd700);border:2px solid #ffd700;border-radius:50px;color:#000;text-decoration:none;font-weight:700;text-transform:uppercase;overflow:hidden;transition:all 0.4s cubic-bezier(0.4,0,0.2,1);box-shadow:0 0 40px rgba(255,215,0,0.3)} .contenedor-botones-misticos{position:fixed;bottom:2rem;right:2rem;display:flex;flex-direction:column;gap:0.6rem;z-index:9999} .boton-magico{max-width:250px;position:relative;display:flex;align-items:center;gap:1rem;padding:1.2rem 2rem;border-radius:50px;text-decoration:none;transform:translateZ(0);transition:all 0.4s cubic-bezier(0.4,0,0.2,1);overflow:hidden;border:2px solid;backdrop-filter:blur(10px);background:linear-gradient(135deg,rgba(0,0,0,0.7) 0%,rgba(0,0,0,0.5) 100%)} .whatsapp-btn{border-color:#25d366;box-shadow:0 0 40px rgba(37,211,102,0.3)} .llamada-btn{border-color:#ff4444;box-shadow:0 0 40px rgba(255,68,68,0.3)} @media (max-width:768px){.titulo-dorado{font-size:2rem}.mystic-title{font-size:2.5rem}.contenedor-botones-misticos{bottom:1rem;right:1rem}} @keyframes title-glow{0%,100%{text-shadow:0 0 30px rgba(255,215,0,0.3)}50%{text-shadow:0 0 50px rgba(255,215,0,0.5)}} </style><link rel="stylesheet" href="./css/non-critical.min.css" media="print" onload="this.media='all'"><link rel="icon" href="./images/favicon.ico" type="image/x-icon"><meta property="og:url" content="https://www.brujeriadeamoryregresosdepareja.store/"><meta property="og:title" content="Brujo Jacob - Experto en Brujería y Amarres de Amor"><meta property="og:description" content="Brujo experto con más de 35 años de experiencia. Amarres de amor, hechizos efectivos y consultas gratis."><meta property="og:type" content="website"><script type="application/ld+json"> { "@context": "http: "@type": "LocalBusiness", "name": "Maestro Jacob", "description": "Brujo experto en amarres de amor y hechizos efectivos", "telephone": "+1 4133912149", "address": { "@type": "PostalAddress", "addressCountry": "Estados Unidos" }, "review": [ { "@type": "Review", "reviewBody": "Excelente servicio, resultados sorprendentes en 5 días", "author": { "@type": "Person", "name": "Fabio López" } } ] } </script><script src="./js/gtm-loader.js" async defer></script><title>Brujo Jacob - Experto en Brujería y Amarres de Amor</title></head><body><!-- Google Tag Manager (noscript) -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NC4RNLBL"
-  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+  <!-- Google Tag Manager - Optimizado -->
+  <script>
+    (function(w,d,s,l,i){
+      w[l]=w[l]||[];
+      w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});
+      var f=d.getElementsByTagName(s)[0],
+      j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';
+      j.async=true;
+      j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
+      f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-NC4RNLBL');
+  </script>
+
+  <!-- Meta tags optimizados -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=6">
+  <meta name="description" content="Brujo Jacob - Experto en brujería, amarres de amor y hechizos efectivos. Consulta gratis. Más de 35 años de experiencia.">
+  <meta name="generator" content="Brujo Jacob">
+  
+  <!-- Preload crítico -->
+  <link rel="preload" href="./css/critical.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <link rel="preload" href="./fonts/cinzel-v23-latin-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="./fonts/cinzel-v23-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+  
+  <!-- CSS crítico inline optimizado -->
+  <style>
+    @font-face {
+      font-family: 'Cinzel';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('./fonts/cinzel-v23-latin-400.woff2') format('woff2');
+      unicode-range: U+1 4133912149FF, U+0131, U+1 4133912149, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+1 4133912149F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'Cinzel';
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+      src: url('./fonts/cinzel-v23-latin-700.woff2') format('woff2');
+      unicode-range: U+1 4133912149FF, U+0131, U+1 4133912149, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+1 4133912149F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    
+    /* CSS crítico optimizado */
+    body{margin:0;font-family:Arial,sans-serif;background:#000000;color:#333;line-height:1.6}
+    .header{background:linear-gradient(45deg,#000,#333);color:#fff;padding:1rem;text-align:center}
+    .logo{font-size:2rem;font-weight:bold;margin-bottom:0.5rem}
+    .phone-container{display:flex;align-items:center;justify-content:center;gap:1rem;margin:1rem 0;min-height:2rem}
+    .phone-link{color:#fff;text-decoration:none;font-size:1.2rem;font-weight:bold;min-width:130px;display:inline-block}
+    .description2{font-size:1rem;opacity:0.9}
+    .titulo-mistico{text-align:center;margin:2rem 0;position:relative}
+    .titulo-dorado{font-family:'Cinzel',serif;font-size:3rem;background:linear-gradient(45deg,#ffd700,#fff3b0,#ffd700);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 30px rgba(255,215,0,0.3);margin-bottom:1rem;min-height:4rem}
+    .container{max-width:1200px;margin:0 auto;padding:0 1rem}
+    .description{font-family:'Cinzel',serif;font-size:1.2rem;line-height:1.8;color:#ffd700;text-shadow:0 0 10px rgba(255,215,0,0.3);background:linear-gradient(45deg,rgba(0,0,0,0.8) 30%,rgba(20,20,20,0.9) 70%);padding:2rem;border:2px solid;border-image:linear-gradient(45deg,#ffd700,#ffdf80,transparent,#ffdf80,#ffd700) 1;border-radius:15px;position:relative;overflow:hidden;backdrop-filter:blur(5px);box-shadow:0 0 30px rgba(255,215,0,0.1),inset 0 0 20px rgba(255,215,0,0.1);transform:translateZ(0);min-height:48px}
+    .mystic-card{position:relative;max-width:800px;margin:2rem auto;border-radius:20px;overflow:hidden;transform:translateZ(0)}
+    .mystic-image{width:100%;height:500px;object-fit:cover;filter:brightness(0.8) blur(2px);transition:filter 0.4s ease}
+    .mystic-content{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;text-align:center;width:90%}
+    .mystic-title{font-family:'Cinzel',serif;font-size:3.5rem;background:linear-gradient(45deg,#ffd700,#ffdf80,#ffd700);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 30px rgba(255,215,0,0.3);margin:0;animation:title-glow 2s ease-in-out infinite;min-height:4rem}
+    .mystic-button{position:relative;display:inline-flex;align-items:center;gap:1rem;padding:1.2rem 2.5rem;background:linear-gradient(45deg,#ffd700,#b8860b,#ffd700);border:2px solid #ffd700;border-radius:50px;color:#000;text-decoration:none;font-weight:700;text-transform:uppercase;overflow:hidden;transition:all 0.4s cubic-bezier(0.4,0,0.2,1);box-shadow:0 0 40px rgba(255,215,0,0.3)}
+    .contenedor-botones-misticos{position:fixed;bottom:2rem;right:2rem;display:flex;flex-direction:column;gap:0.6rem;z-index:9999}
+    .boton-magico{max-width:250px;position:relative;display:flex;align-items:center;gap:1rem;padding:1.2rem 2rem;border-radius:50px;text-decoration:none;transform:translateZ(0);transition:all 0.4s cubic-bezier(0.4,0,0.2,1);overflow:hidden;border:2px solid;backdrop-filter:blur(10px);background:linear-gradient(135deg,rgba(0,0,0,0.7) 0%,rgba(0,0,0,0.5) 100%)}
+    .whatsapp-btn{border-color:#25d366;box-shadow:0 0 40px rgba(37,211,102,0.3)}
+    .llamada-btn{border-color:#ff4444;box-shadow:0 0 40px rgba(255,68,68,0.3)}
+    @media (max-width:768px){
+      .titulo-dorado{font-size:2rem;min-height:3rem}
+      .mystic-title{font-size:2.5rem;min-height:3rem}
+      .contenedor-botones-misticos{bottom:1rem;right:1rem}
+    }
+    @keyframes title-glow{0%,100%{text-shadow:0 0 30px rgba(255,215,0,0.3)}50%{text-shadow:0 0 50px rgba(255,215,0,0.5)}}
+  </style>
+  
+  <!-- CSS no crítico cargado de forma optimizada -->
+  <link rel="stylesheet" href="./css/non-critical.min.css" media="print" onload="this.media='all'">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="./images/favicon.ico" type="image/x-icon">
+  
+  <!-- Open Graph optimizado -->
+  <meta property="og:url" content="https://www.brujeriadeamoryregresosdepareja.store/">
+  <meta property="og:title" content="Brujo Jacob - Experto en Brujería y Amarres de Amor">
+  <meta property="og:description" content="Brujo experto con más de 35 años de experiencia. Amarres de amor, hechizos efectivos y consultas gratis.">
+  <meta property="og:type" content="website">
+  
+  <!-- Schema.org optimizado -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "Maestro Jacob",
+    "description": "Brujo experto en amarres de amor y hechizos efectivos",
+    "telephone": "+1 4133912149",
+    "address": {
+      "@type": "PostalAddress",
+      "addressCountry": "Estados Unidos"
+    },
+    "review": [
+      {
+        "@type": "Review",
+        "reviewBody": "Excelente servicio, resultados sorprendentes en 5 días",
+        "author": {
+          "@type": "Person",
+          "name": "Fabio López"
+        }
+      }
+    ]
+  }
+  </script>
+  
+  <!-- Scripts optimizados -->
+  <script src="./js/gtm-loader.js" defer></script>
+  
+  <title>Brujo Jacob - Experto en Brujería y Amarres de Amor</title>
+</head>
+
+<body>
+  <!-- Google Tag Manager (noscript) -->
+  <noscript>
+    <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NC4RNLBL" height="0" width="0" style="display:none;visibility:hidden"></iframe>
+  </noscript>
   <!-- End Google Tag Manager (noscript) -->
-  <noscript><div id="gtm-noscript-container"></div></noscript><div class="home wrapper"><div class="header"><div class="logo">BRUJO EXPERTO</div><div class="phone-container"><a class="phone-link" href="tel:+14133912149" id="header-phone">+1 4133912149</a><div class="call-icon"><i class="fa fa-phone"></i></div></div><script> if (typeof CONFIG !== 'undefined') { const phoneLink = document.getElementById('header-phone'); if (phoneLink) { phoneLink.href = `tel:${CONFIG.phone.number}`; phoneLink.textContent = CONFIG.phone.number; } } </script><div class="description2">Pague al ver resultados</div></div><div id="contenido-dinamico"><div class="titulo-mistico"><h1 class="titulo-dorado">PODERES MÍSTICOS ANCESTRALES</h1><div class="separador-aura"></div></div><div class="container"><p class="description"> Atraigo y regresos al ser querido en 72 horas sin importar la edad, sexo, tiempo, ni distancia. Cruzándolo mente, cuerpo y espíritu dominando pensamiento y sentimiento hasta doblegarlo y quitarle infidelidad, indiferencia, rebeldía, orgullo y retiro rival. </p></div><div class="mystic-announcement"><div class="mystic-aura"></div><div class="mystic-border"></div><p class="mystic-proclamation"><span class="mystic-text">¡OJO, DONDE OTROS HAN FRACASADO!</span><span class="mystic-flare">¡¡YO TRIUNFO!!</span></p><div class="mystic-particles">✦✧✦✧✦</div></div><div class="mystic-card"><div class="mystic-overlay"></div><img alt="Tarot místico" class="mystic-image" src="images/optimized/mystic-image-1.webp" srcset="images/optimized/mystic-image-1.webp 800w, images/mystic-image-1.webp 1920w" sizes="(max-width: 800px) 100vw, 800px" loading="lazy" width="800" height="533"><div class="mystic-content"><h2 class="mystic-title">Alta Brujeria Poderosa</h2><p class="mystic-subtitle">Brujería Efectiva y de alta Calidad.</p><div class="mystic-cta"><a class="mystic-button whatsapp-link" href="https://wa.me/+14133912149?text=Hola, bendiciones"><i class="fab fa-whatsapp mystic-icon"></i><span class="mystic-button-text">Consulta Gratis</span><div class="mystic-glow"></div></a></div></div></div><div class="container"><p class="description"> Conmigo harás tus deseos realidad a través de los poderosos amarres para atraerlo (a), sin importar en donde esté, sin daño alguno </p></div><a class="mystic-button whatsapp-link" href="https://wa.me/+14133912149?text=Hola, bendiciones"><i class="fab fa-whatsapp mystic-icon"></i><span class="mystic-button-text">Consulta Gratis</span><div class="mystic-glow"></div></a><div class="container"><p class="description" style="font-size: 16px; font-weight: bold; color: #fff; text-shadow: 1px 1px #f96f6f; text-align: center; background: repeating-linear-gradient(280deg, black, transparent 100px);"> Solución a toda clase de problemas: amor, suerte, dinero, salud, maleficios, enfermedades postizas, retiramos amantes, malas energías, posesiones, espíritus, salvamentos, hacemos protecciones, contras y sanciones espirituales. </p></div><div class="mystic-card"><div class="mystic-overlay"></div><img alt="Tarot místico" class="mystic-image" src="images/optimized/mystic-image-2.webp" srcset="images/optimized/mystic-image-2.webp 800w, images/mystic-image-2.webp 800w" sizes="(max-width: 800px) 100vw, 800px" loading="lazy" width="800" height="1000"><div class="mystic-content"><h2 class="mystic-title">Tarot Profesional</h2><p class="mystic-subtitle">Revelación de Destino</p><div class="mystic-cta"><a class="mystic-button whatsapp-link" href="https://wa.me/+14133912149?text=Hola, bendiciones"><i class="fab fa-whatsapp mystic-icon"></i><span class="mystic-button-text">Consulta Gratis</span><div class="mystic-glow"></div></a></div></div></div><div class="arcane-container"><div class="arcane-portal-wrapper"><div class="arcane-visual-section"><div class="arcane-frame-mod"><img alt="Poder arcano" class="arcane-main-visual" src="images/optimized/arcane-main-visual.webp" srcset="images/optimized/arcane-main-visual.webp 550w, images/arcane-main-visual.webp 800w" sizes="(max-width: 550px) 100vw, 550px" loading="lazy" width="550" height="825"><div class="arcane-overlay-effect"></div></div><img alt="Emblema arcano" class="arcane-emblem" src="images/arcane-emblem.webp" loading="lazy"></div><div class="arcane-content-section"><h2 class="arcane-main-title"> Brujo <span class="arcane-highlight-name">Jacob</span></h2><p class="arcane-description-text"> Soy un brujo altamente experimentado con más de <span class="arcane-gold-text">35 años</span> de práctica en el arte oscuro. He forjado mi reputación ayudando a cientos de almas a conquistar sus <span class="arcane-gold-text">deseos amorosos</span>, <span class="arcane-gold-text">éxito profesional</span> y <span class="arcane-gold-text">poder personal</span>. </p><div class="arcane-connection-btns"><a class="arcane-phone-link" href="tel:+14133912149" id="arcane-phone"><i class="fas fa-phone-alt arcane-btn-icon"></i><span id="arcane-phone-formatted">+1 4133912149</span><div class="arcane-link-glow"></div></a><a class="arcane-cta-btn whatsapp-link" href="https://wa.me/+14133912149?text=Hola, bendiciones"><i class="fab fa-whatsapp arcane-btn-icon"></i><span>WhatsApp</span><div class="arcane-aura-effect"></div></a></div></div></div></div><div id="wordsContainer"></div><div class="container"><p class="description"> ¿Está buscando una solución para fortalecer su relación amorosa o encontrar a su alma gemela? ¿Ha intentado todo sin resultados satisfactorios? ¿Cree en la magia y en su poder para solucionar problemas en su vida amorosa? </p><p class="description"> Si respondió sí a alguna de estas preguntas, entonces ha llegado al lugar correcto. En nuestro servicio de brujería, ofrecemos una amplia variedad de opciones mágicas para ayudarle a lograr sus metas amorosas. Desde amarres de amor, endulzamientos, hechizos hasta entierros vudu, tenemos la solución perfecta para usted. </p><a href="https://wa.me/+14133912149?text=Hola, bendiciones" class="whatsapp-link"><button class="button">Whatsapp</button></a></div><div class="container"><p class="description"> Soy especialista en el uso de velas y hierbas mágicas para potenciar mis hechizos y conjuros, y también me especializo en la realización de rituales y ceremonias para atraer el <span>amor, la pasión y la felicidad.</span> Además, también ofrezco servicios de limpieza espiritual y desatado de entidades negativas para ayudar a mis clientes a liberarse de cualquier negatividad en sus vidas. </p><img alt="image" id="imagen-anima" src="images/imagen-anima.webp" loading="lazy" style="width: 100%; max-width: 800px; height: auto; min-height: 300px; max-height: 500px; object-fit: cover; border-radius: 15px; margin: 2rem auto; display: block;"></div><div class="testimonials-container"><div class="testimonial"><p class="testimonial-text"> "En medio de tantos maestros y brujos falsos que existen por todo internet, resalto que este si que es de verdad, muestra evidencia total del trabajo y además los resultados son fantasticos. En mi caso hice un amarre de amor que en 5 días tuvo un efecto muy fuerte. Gracias" </p><p class="testimonial-date">15 de Agosto de 2021</p><div class="testimonial-info"><img alt="Foto de persona" class="testimonial-img" src="images/optimized/testimonial-1.webp" srcset="images/optimized/testimonial-1.webp 60w, images/testimonial-1.webp 400w" sizes="60px" loading="lazy" width="60" height="60"><div class="testimonial-name-city"><p class="testimonial-name">Fabio López</p><p class="testimonial-city">Los Ángeles, CA</p></div></div></div><div class="testimonial"><p class="testimonial-text"> "Ya con tan buenas experiencias que siemrpre he tenido con usted maestro creo que es hora de recomendarlo con mis amigos y toda persona que necesite un trabajo o consulta espiritual y de brujeria. Gracias por ser esa persona que ayuda siempre cuando lo necesito." </p><p class="testimonial-date">15 de Febrero de 2021</p><div class="testimonial-info"><img alt="Foto de persona" class="testimonial-img" src="images/optimized/testimonial-2.webp" srcset="images/optimized/testimonial-2.webp 60w, images/testimonial-2.webp 280w" sizes="60px" loading="lazy" width="60" height="60"><div class="testimonial-name-city"><p class="testimonial-name">Maria Rodriguez</p><p class="testimonial-city">Houston, TX</p></div></div></div><div class="testimonial"><p class="testimonial-text"> "Si no quieren perder su dinero con charlatanes les recomiendo al maestro Jacob. Siempre tiene ayuda para ti en lo que necesites. No existe nunca un no para todo lo que te atormente. Sus trabajos son muy bien hechos." </p><p class="testimonial-date">15 de Junio de 2022</p><div class="testimonial-info"><img alt="Foto de persona" class="testimonial-img" src="images/optimized/testimonial-3.webp" srcset="images/optimized/testimonial-3.webp 60w, images/testimonial-3.webp 280w" sizes="60px" loading="lazy" width="60" height="60"><div class="testimonial-name-city"><p class="testimonial-name">Marcela Gutierrez</p><p class="testimonial-city">New York, NY</p></div></div></div></div><div class="masonry-grid"><div class="masonry-grid-item"><img alt="brujeria" class="zoom" src="images/brujeria-1.webp" loading="lazy"></div><div class="masonry-grid-item"><img alt="brujeria" class="zoom" src="images/brujeria-2.webp" loading="lazy"></div><div class="masonry-grid-item"><img alt="brujeria" class="zoom" src="images/brujeria-3.webp" loading="lazy"></div><div class="masonry-grid-item"><img alt="brujeria" class="zoom" src="images/brujeria-4.webp" loading="lazy"></div></div><div class="container"><img alt="image" class="bg-img" src="images/bg-img.webp" loading="lazy"><h2>¿Cómo trabaja el Maestro?</h2><p class="description"> Los poderosos trabajos del maestro Jacob, son debidamente analizados con una consulta previa, para así determinar qué tipo de trabajo necesita y tener plena seguridad y certeza del buen desarrollo del proceso a realizar. Lo importante para el trabajo, es una buena canalización de energía y el convencimiento de que a esa persona a la que lanzamos el trabajo le va funcionar 100%. </p><a class="more-info whatsapp-link" href="https://wa.me/+14133912149?text=Hola, bendiciones"><i class="fab fa-whatsapp arcane-btn-icon"></i> WhatsApp</a></div><div class="container"><p class="description"> Ofrezco una garantía de satisfacción en todos mis servicios. Si no estás completamente satisfecho con los resultados, puedes ponerte en contacto conmigo y trabajaremos juntos para encontrar una solución adecuada. También me aseguro de mantener la privacidad y la seguridad de todos mis clientes, para que puedas confiar en mí plenamente. </p><p class="description"> No pierda la oportunidad, consulte al brujo Jacob gratis para hacer todo tipo de trabajos espirituales. Hacemos magia negra, blanca o roja. Brujo Experto en Alta magia. </p><div class="container" style="height: auto;"><img alt="image" src="images/main-image.webp" loading="lazy" style="width: 100%; max-width: 800px; height: auto; min-height: 300px; max-height: 500px; object-fit: cover; border-radius: 15px; margin: 2rem auto; display: block;"><h2 style="color: #e5e5e5; margin-right: 15px;"> Maestro <span style="animation: vibrate 0.5s ease-in-out infinite; display: inline-block; color: gold;">Jacob</span></h2><a class="more-info" href="tel:+14133912149" id="footer-phone"><i class="fas fa-phone-alt arcane-btn-icon"></i><span id="footer-phone-text">+1 4133912149</span></a></div><p class="description"> Si estas atravesando por un mal momento en tu relación y no sabes que hacer, NO LO PIENSES MÁS debes tomar las riendas y poner todo en su lugar. Deseo conocer tu caso, seguro que tengo la solución para que seas feliz con quien deseas estar. </p></div><div class="container"><h2 id="fire" style="color: #000000; font-weight: bold; text-transform: uppercase;">Pagas al ver Resultados</h2><p class="description"> Como medida de garantía el maestro Jacob solo usted pagara cuando vea resultados en su trabajo. Yo trabajo y despues usted paga. </p><a class="more-info whatsapp-link" href="https://wa.me/+14133912149?text=Hola, bendiciones"><i class="fab fa-whatsapp arcane-btn-icon"></i> WhatsApp</a><h2 id="fire" style="color: #000000; font-weight: bold; text-transform: uppercase; margin-top: 20px;">Consulta Gratis</h2><p class="description"> El santero no cobrará por las consultas que usted realice. Él utilizará su altar y sus herramientas esotéricas para develar su consulta. </p><h2 id="fire" style="color: #000000; font-weight: bold; text-transform: uppercase; margin-top: 20px;">Seguimiento a su caso</h2><p class="description"> No solamente realizamos un trabajo y nos olvidamos de usted, por el contrario, hacemos un seguimiento de su caso y mejoramos cada vez los resultados. </p><a class="more-info" href="https://wa.me/+14133912149?text=Hola, bendiciones"><i class="fab fa-whatsapp arcane-btn-icon"></i> WhatsApp</a></div><div class="footer"><div id="footer-info"> ❤️ Brujo Mayor Experto en Amarres y casos de pareja, atención personalizada las 24 Horas del día. Estados Unidos </div></div></div><div class="contenedor-botones-misticos"><a class="boton-magico llamada-btn" href="tel:+14133912149" id="floating-phone"><div class="orb-magico"><i class="fas fa-phone-alt icono-magico"></i><div class="aura-btn"></div><div class="particulas-btn"></div></div><span class="texto-boton">Llamar Ahora</span><div class="brillo-activo"></div></a><a class="boton-magico whatsapp-btn whatsapp-link" href="https://wa.me/+14133912149?text=Hola, bendiciones"><div class="orb-magico"><i class="fab fa-whatsapp icono-magico"></i><div class="aura-btn"></div><div class="particulas-btn">✨</div></div><span class="texto-boton">WhatsApp</span><div class="status-online"><span class="punto-online"></span><span class="texto-online">En Línea</span></div></a></div></div><script> if ('serviceWorker' in navigator) { window.addEventListener('load', function() { navigator.serviceWorker.register('./sw.js') .then(function(registration) { console.log('SW registered: ', registration); }) .catch(function(registrationError) { console.log('SW registration failed: ', registrationError); }); }); } </script><script src="./js/main.min.js" defer></script><style> @font-face { font-family: 'Font Awesome 6 Brands'; font-style: normal; font-weight: 400; font-display: swap; src: url('./fonts/fontawesome/fa-brands-400.woff2') format('woff2'); } @font-face { font-family: 'Font Awesome 6 Free'; font-style: normal; font-weight: 900; font-display: swap; src: url('./fonts/fontawesome/fa-solid-900.woff2') format('woff2'); } .fab { font-family: 'Font Awesome 6 Brands'; font-weight: 400; } .fas { font-family: 'Font Awesome 6 Free'; font-weight: 900; } </style><link rel="preload" href="./fonts/fontawesome/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="./fonts/fontawesome/fa-brands-400.woff2" as="font" type="font/woff2" crossorigin></body></html>
+  
+  <noscript><div id="gtm-noscript-container"></div></noscript>
+  
+  <div class="home wrapper">
+    <div class="header">
+      <div class="logo">BRUJO EXPERTO</div>
+      <div class="phone-container">
+        <a class="phone-link" href="tel:+14133912149" id="header-phone">+1 4133912149</a>
+        <div class="call-icon"><i class="fa fa-phone"></i></div>
+      </div>
+      <script>
+        if (typeof CONFIG !== 'undefined') {
+          const phoneLink = document.getElementById('header-phone');
+          if (phoneLink) {
+            phoneLink.href = `tel:${CONFIG.phone.number}`;
+            phoneLink.textContent = CONFIG.phone.number;
+          }
+        }
+      </script>
+      <div class="description2">Pague al ver resultados</div>
+    </div>
+    
+    <div id="contenido-dinamico">
+      <div class="titulo-mistico">
+        <h1 class="titulo-dorado">PODERES MÍSTICOS ANCESTRALES</h1>
+        <div class="separador-aura"></div>
+      </div>
+      
+      <div class="container">
+        <p class="description">
+          Atraigo y regresos al ser querido en 72 horas sin importar la edad, sexo, tiempo, ni distancia. Cruzándolo mente, cuerpo y espíritu dominando pensamiento y sentimiento hasta doblegarlo y quitarle infidelidad, indiferencia, rebeldía, orgullo y retiro rival.
+        </p>
+      </div>
+      
+      <div class="mystic-announcement">
+        <div class="mystic-aura"></div>
+        <div class="mystic-border"></div>
+        <p class="mystic-proclamation">
+          <span class="mystic-text">¡OJO, DONDE OTROS HAN FRACASADO!</span>
+          <span class="mystic-flare">¡¡YO TRIUNFO!!</span>
+        </p>
+        <div class="mystic-particles">✦✧✦✧✦</div>
+      </div>
+      
+      <div class="mystic-card">
+        <div class="mystic-overlay"></div>
+        <img alt="Tarot místico" class="mystic-image" src="images/optimized/mystic-image-1.webp" srcset="images/optimized/mystic-image-1.webp 800w, images/mystic-image-1.webp 1920w" sizes="(max-width: 800px) 100vw, 800px" loading="lazy" width="800" height="533">
+        <div class="mystic-content">
+          <h2 class="mystic-title">Alta Brujeria Poderosa</h2>
+          <p class="mystic-subtitle">Brujería Efectiva y de alta Calidad.</p>
+          <div class="mystic-cta">
+            <a class="mystic-button whatsapp-link" href="https://wa.me/+14133912149?text=Hola, bendiciones">
+              <i class="fab fa-whatsapp mystic-icon"></i>
+              <span class="mystic-button-text">Consulta Gratis</span>
+              <div class="mystic-glow"></div>
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <div class="container">
+        <p class="description">
+          Conmigo harás tus deseos realidad a través de los poderosos amarres para atraerlo (a), sin importar en donde esté, sin daño alguno
+        </p>
+      </div>
+      
+      <a class="mystic-button whatsapp-link" href="https://wa.me/+14133912149?text=Hola, bendiciones">
+        <i class="fab fa-whatsapp mystic-icon"></i>
+        <span class="mystic-button-text">Consulta Gratis</span>
+        <div class="mystic-glow"></div>
+      </a>
+      
+      <div class="container">
+        <p class="description" style="font-size: 16px; font-weight: bold; color: #fff; text-shadow: 1px 1px #f96f6f; text-align: center; background: repeating-linear-gradient(280deg, black, transparent 100px);">
+          Solución a toda clase de problemas: amor, suerte, dinero, salud, maleficios, enfermedades postizas, retiramos amantes, malas energías, posesiones, espíritus, salvamentos, hacemos protecciones, contras y sanciones espirituales.
+        </p>
+      </div>
+      
+      <div class="mystic-card">
+        <div class="mystic-overlay"></div>
+        <img alt="Tarot místico" class="mystic-image" src="images/optimized/mystic-image-2.webp" srcset="images/optimized/mystic-image-2.webp 800w, images/mystic-image-2.webp 800w" sizes="(max-width: 800px) 100vw, 800px" loading="lazy" width="800" height="1000">
+        <div class="mystic-content">
+          <h2 class="mystic-title">Tarot Profesional</h2>
+          <p class="mystic-subtitle">Revelación de Destino</p>
+          <div class="mystic-cta">
+            <a class="mystic-button whatsapp-link" href="https://wa.me/+14133912149?text=Hola, bendiciones">
+              <i class="fab fa-whatsapp mystic-icon"></i>
+              <span class="mystic-button-text">Consulta Gratis</span>
+              <div class="mystic-glow"></div>
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <div class="arcane-container">
+        <div class="arcane-portal-wrapper">
+          <div class="arcane-visual-section">
+            <div class="arcane-frame-mod">
+              <img alt="Poder arcano" class="arcane-main-visual" src="images/optimized/arcane-main-visual.webp" srcset="images/optimized/arcane-main-visual.webp 550w, images/arcane-main-visual.webp 800w" sizes="(max-width: 550px) 100vw, 550px" loading="lazy" width="550" height="825">
+              <div class="arcane-overlay-effect"></div>
+            </div>
+            <img alt="Emblema arcano" class="arcane-emblem" src="images/arcane-emblem.webp" loading="lazy">
+          </div>
+          <div class="arcane-content-section">
+            <h2 class="arcane-main-title">
+              Brujo <span class="arcane-highlight-name">Jacob</span>
+            </h2>
+            <p class="arcane-description-text">
+              Soy un brujo altamente experimentado con más de <span class="arcane-gold-text">35 años</span> de práctica en el arte oscuro. He forjado mi reputación ayudando a cientos de almas a conquistar sus <span class="arcane-gold-text">deseos amorosos</span>, <span class="arcane-gold-text">éxito profesional</span> y <span class="arcane-gold-text">poder personal</span>.
+            </p>
+            <div class="arcane-connection-btns">
+              <a class="arcane-phone-link" href="tel:+14133912149" id="arcane-phone">
+                <i class="fas fa-phone-alt arcane-btn-icon"></i>
+                <span id="arcane-phone-formatted">+1 4133912149</span>
+                <div class="arcane-link-glow"></div>
+              </a>
+              <a class="arcane-cta-btn whatsapp-link" href="https://wa.me/+14133912149?text=Hola, bendiciones">
+                <i class="fab fa-whatsapp arcane-btn-icon"></i>
+                <span>WhatsApp</span>
+                <div class="arcane-aura-effect"></div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="wordsContainer"></div>
+      
+      <div class="container">
+        <p class="description">
+          ¿Está buscando una solución para fortalecer su relación amorosa o encontrar a su alma gemela? ¿Ha intentado todo sin resultados satisfactorios? ¿Cree en la magia y en su poder para solucionar problemas en su vida amorosa?
+        </p>
+        <p class="description">
+          Si respondió sí a alguna de estas preguntas, entonces ha llegado al lugar correcto. En nuestro servicio de brujería, ofrecemos una amplia variedad de opciones mágicas para ayudarle a lograr sus metas amorosas. Desde amarres de amor, endulzamientos, hechizos hasta entierros vudu, tenemos la solución perfecta para usted.
+        </p>
+        <a href="https://wa.me/+14133912149?text=Hola, bendiciones" class="whatsapp-link">
+          <button class="button">Whatsapp</button>
+        </a>
+      </div>
+      
+      <div class="container">
+        <p class="description">
+          Soy especialista en el uso de velas y hierbas mágicas para potenciar mis hechizos y conjuros, y también me especializo en la realización de rituales y ceremonias para atraer el <span>amor, la pasión y la felicidad.</span> Además, también ofrezco servicios de limpieza espiritual y desatado de entidades negativas para ayudar a mis clientes a liberarse de cualquier negatividad en sus vidas.
+        </p>
+        <img alt="image" id="imagen-anima" src="images/imagen-anima.webp" loading="lazy" style="width: 100%; max-width: 800px; height: auto; min-height: 300px; max-height: 500px; object-fit: cover; border-radius: 15px; margin: 2rem auto; display: block;">
+      </div>
+      
+      <div class="testimonials-container">
+        <div class="testimonial">
+          <p class="testimonial-text">
+            "En medio de tantos maestros y brujos falsos que existen por todo internet, resalto que este si que es de verdad, muestra evidencia total del trabajo y además los resultados son fantasticos. En mi caso hice un amarre de amor que en 5 días tuvo un efecto muy fuerte. Gracias"
+          </p>
+          <p class="testimonial-date">15 de Agosto de 2021</p>
+          <div class="testimonial-info">
+            <img alt="Foto de persona" class="testimonial-img" src="images/optimized/testimonial-1.webp" srcset="images/optimized/testimonial-1.webp 60w, images/testimonial-1.webp 400w" sizes="60px" loading="lazy" width="60" height="60">
+            <div class="testimonial-name-city">
+              <p class="testimonial-name">Fabio López</p>
+              <p class="testimonial-city">Los Ángeles, CA</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="testimonial">
+          <p class="testimonial-text">
+            "Ya con tan buenas experiencias que siemrpre he tenido con usted maestro creo que es hora de recomendarlo con mis amigos y toda persona que necesite un trabajo o consulta espiritual y de brujeria. Gracias por ser esa persona que ayuda siempre cuando lo necesito."
+          </p>
+          <p class="testimonial-date">15 de Febrero de 2021</p>
+          <div class="testimonial-info">
+            <img alt="Foto de persona" class="testimonial-img" src="images/optimized/testimonial-2.webp" srcset="images/optimized/testimonial-2.webp 60w, images/testimonial-2.webp 280w" sizes="60px" loading="lazy" width="60" height="60">
+            <div class="testimonial-name-city">
+              <p class="testimonial-name">Maria Rodriguez</p>
+              <p class="testimonial-city">Houston, TX</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="testimonial">
+          <p class="testimonial-text">
+            "Si no quieren perder su dinero con charlatanes les recomiendo al maestro Jacob. Siempre tiene ayuda para ti en lo que necesites. No existe nunca un no para todo lo que te atormente. Sus trabajos son muy bien hechos."
+          </p>
+          <p class="testimonial-date">15 de Junio de 2022</p>
+          <div class="testimonial-info">
+            <img alt="Foto de persona" class="testimonial-img" src="images/optimized/testimonial-3.webp" srcset="images/optimized/testimonial-3.webp 60w, images/testimonial-3.webp 280w" sizes="60px" loading="lazy" width="60" height="60">
+            <div class="testimonial-name-city">
+              <p class="testimonial-name">Marcela Gutierrez</p>
+              <p class="testimonial-city">New York, NY</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="masonry-grid">
+        <div class="masonry-grid-item">
+          <img alt="brujeria" class="zoom" src="images/brujeria-1.webp" loading="lazy">
+        </div>
+        <div class="masonry-grid-item">
+          <img alt="brujeria" class="zoom" src="images/brujeria-2.webp" loading="lazy">
+        </div>
+        <div class="masonry-grid-item">
+          <img alt="brujeria" class="zoom" src="images/brujeria-3.webp" loading="lazy">
+        </div>
+        <div class="masonry-grid-item">
+          <img alt="brujeria" class="zoom" src="images/brujeria-4.webp" loading="lazy">
+        </div>
+      </div>
+      
+      <div class="container">
+        <img alt="image" class="bg-img" src="images/bg-img.webp" loading="lazy">
+        <h2>¿Cómo trabaja el Maestro?</h2>
+        <p class="description">
+          Los poderosos trabajos del maestro Jacob, son debidamente analizados con una consulta previa, para así determinar qué tipo de trabajo necesita y tener plena seguridad y certeza del buen desarrollo del proceso a realizar. Lo importante para el trabajo, es una buena canalización de energía y el convencimiento de que a esa persona a la que lanzamos el trabajo le va funcionar 100%.
+        </p>
+        <a class="more-info whatsapp-link" href="https://wa.me/+14133912149?text=Hola, bendiciones">
+          <i class="fab fa-whatsapp arcane-btn-icon"></i> WhatsApp
+        </a>
+      </div>
+      
+      <div class="container">
+        <p class="description">
+          Ofrezco una garantía de satisfacción en todos mis servicios. Si no estás completamente satisfecho con los resultados, puedes ponerte en contacto conmigo y trabajaremos juntos para encontrar una solución adecuada. También me aseguro de mantener la privacidad y la seguridad de todos mis clientes, para que puedas confiar en mí plenamente.
+        </p>
+        <p class="description">
+          No pierda la oportunidad, consulte al brujo Jacob gratis para hacer todo tipo de trabajos espirituales. Hacemos magia negra, blanca o roja. Brujo Experto en Alta magia.
+        </p>
+        <div class="container" style="height: auto;">
+          <img alt="image" src="images/main-image.webp" loading="lazy" style="width: 100%; max-width: 800px; height: auto; min-height: 300px; max-height: 500px; object-fit: cover; border-radius: 15px; margin: 2rem auto; display: block;">
+          <h2 style="color: #e5e5e5; margin-right: 15px;">
+            Maestro <span style="animation: vibrate 0.5s ease-in-out infinite; display: inline-block; color: gold;">Jacob</span>
+          </h2>
+          <a class="more-info" href="tel:+14133912149" id="footer-phone">
+            <i class="fas fa-phone-alt arcane-btn-icon"></i>
+            <span id="footer-phone-text">+1 4133912149</span>
+          </a>
+        </div>
+        <p class="description">
+          Si estas atravesando por un mal momento en tu relación y no sabes que hacer, NO LO PIENSES MÁS debes tomar las riendas y poner todo en su lugar. Deseo conocer tu caso, seguro que tengo la solución para que seas feliz con quien deseas estar.
+        </p>
+      </div>
+      
+      <div class="container">
+        <h2 id="fire" style="color: #000000; font-weight: bold; text-transform: uppercase;">Pagas al ver Resultados</h2>
+        <p class="description">
+          Como medida de garantía el maestro Jacob solo usted pagara cuando vea resultados en su trabajo. Yo trabajo y despues usted paga.
+        </p>
+        <a class="more-info whatsapp-link" href="https://wa.me/+14133912149?text=Hola, bendiciones">
+          <i class="fab fa-whatsapp arcane-btn-icon"></i> WhatsApp
+        </a>
+        <h2 id="fire" style="color: #000000; font-weight: bold; text-transform: uppercase; margin-top: 20px;">Consulta Gratis</h2>
+        <p class="description">
+          El santero no cobrará por las consultas que usted realice. Él utilizará su altar y sus herramientas esotéricas para develar su consulta.
+        </p>
+        <h2 id="fire" style="color: #000000; font-weight: bold; text-transform: uppercase; margin-top: 20px;">Seguimiento a su caso</h2>
+        <p class="description">
+          No solamente realizamos un trabajo y nos olvidamos de usted, por el contrario, hacemos un seguimiento de su caso y mejoramos cada vez los resultados.
+        </p>
+        <a class="more-info" href="https://wa.me/+14133912149?text=Hola, bendiciones">
+          <i class="fab fa-whatsapp arcane-btn-icon"></i> WhatsApp
+        </a>
+      </div>
+      
+      <div class="footer">
+        <div id="footer-info">
+          ❤️ Brujo Mayor Experto en Amarres y casos de pareja, atención personalizada las 24 Horas del día. Estados Unidos
+        </div>
+      </div>
+    </div>
+    
+    <div class="contenedor-botones-misticos">
+      <a class="boton-magico llamada-btn" href="tel:+14133912149" id="floating-phone">
+        <div class="orb-magico">
+          <i class="fas fa-phone-alt icono-magico"></i>
+          <div class="aura-btn"></div>
+          <div class="particulas-btn"></div>
+        </div>
+        <span class="texto-boton">Llamar Ahora</span>
+        <div class="brillo-activo"></div>
+      </a>
+      <a class="boton-magico whatsapp-btn whatsapp-link" href="https://wa.me/+14133912149?text=Hola, bendiciones">
+        <div class="orb-magico">
+          <i class="fab fa-whatsapp icono-magico"></i>
+          <div class="aura-btn"></div>
+          <div class="particulas-btn">✨</div>
+        </div>
+        <span class="texto-boton">WhatsApp</span>
+        <div class="status-online">
+          <span class="punto-online"></span>
+          <span class="texto-online">En Línea</span>
+        </div>
+      </a>
+    </div>
+  </div>
+  
+  <!-- Service Worker optimizado -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js')
+          .then(function(registration) {
+            console.log('SW registered: ', registration);
+          })
+          .catch(function(registrationError) {
+            console.log('SW registration failed: ', registrationError);
+          });
+      });
+    }
+  </script>
+  
+  <!-- Script principal optimizado -->
+  <script src="./js/main.min.js" defer></script>
+  
+  <!-- Fuentes FontAwesome optimizadas -->
+  <style>
+    @font-face {
+      font-family: 'Font Awesome 6 Brands';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('./fonts/fontawesome/fa-brands-400.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Font Awesome 6 Free';
+      font-style: normal;
+      font-weight: 900;
+      font-display: swap;
+      src: url('./fonts/fontawesome/fa-solid-900.woff2') format('woff2');
+    }
+    .fab {
+      font-family: 'Font Awesome 6 Brands';
+      font-weight: 400;
+    }
+    .fas {
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+    }
+  </style>
+  
+  <!-- Preload de fuentes FontAwesome -->
+  <link rel="preload" href="./fonts/fontawesome/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="./fonts/fontawesome/fa-brands-400.woff2" as="font" type="font/woff2" crossorigin>
+</body>
+</html>
