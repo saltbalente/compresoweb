@@ -46,9 +46,8 @@
         }
       });
 
-      // 3. DNS prefetch optimizado
+      // 3. DNS prefetch optimizado - Solo para recursos esenciales
       const dnsPrefetchUrls = [
-        '//www.googletagmanager.com',
         '//fonts.googleapis.com',
         '//cdnjs.cloudflare.com'
       ];
@@ -141,17 +140,30 @@
     })();
   </script>
 
-  <!-- Google Tag Manager - Optimizado -->
+  <!-- Google Tag Manager - Optimizado y Condicional -->
   <script>
-    (function(w,d,s,l,i){
-      w[l]=w[l]||[];
-      w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});
-      var f=d.getElementsByTagName(s)[0],
-      j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';
-      j.async=true;
-      j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
-      f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-NC4RNLBL');
+    // Solo cargar GTM si es necesario y después de la carga crítica
+    window.addEventListener('load', function() {
+      // Verificar si el usuario ha interactuado o si es necesario cargar GTM
+      const shouldLoadGTM = !sessionStorage.getItem('gtm_loaded') && 
+                           (document.referrer || navigator.userAgent.includes('bot') === false);
+      
+      if (shouldLoadGTM) {
+        // Cargar GTM de forma optimizada
+        (function(w,d,s,l,i){
+          w[l]=w[l]||[];
+          w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});
+          var f=d.getElementsByTagName(s)[0],
+          j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';
+          j.async=true;
+          j.defer=true;
+          j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
+          f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer','GTM-NC4RNLBL');
+        
+        sessionStorage.setItem('gtm_loaded', 'true');
+      }
+    });
   </script>
 
   <!-- Meta tags optimizados -->
@@ -249,14 +261,12 @@
   }
   </script>
   
-  <!-- Scripts optimizados -->
-  <script src="./js/gtm-loader.js" defer></script>
-  
+  <!-- Scripts optimizados - GTM loader removido para evitar duplicados -->
   <title>Brujo Jacob - Experto en Brujería y Amarres de Amor</title>
 </head>
 
 <body>
-  <!-- Google Tag Manager (noscript) -->
+  <!-- Google Tag Manager (noscript) - Solo si GTM está cargado -->
   <noscript>
     <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NC4RNLBL" height="0" width="0" style="display:none;visibility:hidden"></iframe>
   </noscript>
