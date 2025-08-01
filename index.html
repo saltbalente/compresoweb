@@ -1,4 +1,95 @@
-<!DOCTYPE html><html lang="es" dir="ltr"><head><!-- Google Tag Manager -->
+<!DOCTYPE html><html lang="es" dir="ltr"><head>
+  <!-- Web Performance Optimizer Script -->
+<script>
+  (function() {
+    // 1. Reservar espacio para imágenes que no tienen width/height
+    document.querySelectorAll('img:not([width])').forEach(function(img) {
+      // Si ya está cargada, ignora
+      if (img.complete) return;
+      // Si tiene datos de tamaño en srcset, intenta usar el primer valor (más pequeño)
+      var match = img.srcset && img.srcset.match(/(\d+)w/);
+      var width = match ? parseInt(match[1], 10) : (img.naturalWidth || 300);
+      var height = img.naturalHeight || 200;
+      // Si el padre tiene tamaño, úsalo
+      if (img.parentElement && img.parentElement.offsetWidth && img.parentElement.offsetHeight) {
+        width = img.parentElement.offsetWidth;
+        height = img.parentElement.offsetHeight;
+      }
+      img.width = width;
+      img.height = height;
+      img.style.background = "#111"; // placeholder visual
+    });
+  
+    // 2. Lazy-load para imágenes grandes que no sean críticas
+    document.querySelectorAll('img').forEach(function(img) {
+      if (!img.hasAttribute('loading')) img.setAttribute('loading', 'lazy');
+    });
+  
+    // 3. Preload/preconnect para recursos críticos (solo si no existen ya)
+    var preconnects = [
+      "https://www.googletagmanager.com",
+      "https://fonts.googleapis.com",
+      "https://cdnjs.cloudflare.com",
+      "https://hechizos-para-recuperar-a-tu-ex-en-estados-unidos.esoterico.app"
+    ];
+    preconnects.forEach(function(url) {
+      if (!document.querySelector('link[rel="preconnect"][href="'+url+'"]')) {
+        var link = document.createElement('link');
+        link.rel = "preconnect";
+        link.href = url;
+        document.head.appendChild(link);
+      }
+    });
+  
+    // 4. Reserva espacio para los elementos que causan layout shift
+    function reserveLayout(selector, minHeight) {
+      document.querySelectorAll(selector).forEach(function(el) {
+        if (!el.style.minHeight) el.style.minHeight = minHeight + "px";
+      });
+    }
+    reserveLayout('.description', 48); // Ajusta según tu diseño
+    reserveLayout('.brillo-activo', 24);
+  
+    // 5. Reduce el trabajo del hilo principal: prioriza el CSS y difiere el JS no crítico
+    document.querySelectorAll('script[src]').forEach(function(script) {
+      // Si es main.min.js o scripts pesados, asegúrate que tengan defer
+      if (script.src.match(/main\.min\.js/) && !script.defer) script.defer = true;
+      if (script.src.match(/gtm-loader\.js/) && !script.defer) script.defer = true;
+    });
+  
+    // 6. Opcional: Reduce la evaluación de scripts de Tag Manager si no es crítico
+    // (solo si puedes/quiere, sino ignora este paso)
+    // window.dataLayer = window.dataLayer || [];
+    // window.dataLayer.push({event:'gtm.js'});
+  
+    // 7. Imágenes: Si tienes imágenes muy grandes, redimensiónalas automáticamente para dispositivos móviles
+    function optimizeImagesForDevice() {
+      var isMobile = window.innerWidth <= 600;
+      document.querySelectorAll('img').forEach(function(img) {
+        if (!img.srcset) return;
+        var srcs = img.srcset.split(',');
+        if (srcs.length > 1 && isMobile) {
+          // Usa la versión más pequeña para móviles
+          var bestSrc = srcs[0].trim().split(' ')[0];
+          img.src = bestSrc;
+        }
+      });
+    }
+    window.addEventListener('load', optimizeImagesForDevice);
+  
+    // 8. Font swap: asegúrate que las fuentes tengan font-display: swap
+    var style = document.createElement('style');
+    style.innerHTML = "@font-face{font-display:swap}";
+    document.head.appendChild(style);
+  
+    // 9. Evita reflujo por el teléfono dinámico
+    var headerPhone = document.getElementById('header-phone');
+    if (headerPhone) {
+      headerPhone.style.minWidth = "130px"; // reserva espacio para el cambio
+    }
+  })();
+  </script>
+  <!-- Google Tag Manager -->
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
   new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
   j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
